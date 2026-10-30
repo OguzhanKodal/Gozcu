@@ -69,7 +69,7 @@ final class Store: ObservableObject {
     func start() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.pollAll() }
+            Task { @MainActor [weak self] in self?.pollAll() }
         }
         pollAll()
     }

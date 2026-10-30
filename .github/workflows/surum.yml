@@ -35,7 +35,7 @@ jobs:
         with: { name: windows, path: gozcu-ajan-windows-x86_64.zip }
 
   mac:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - run: GOZCU_PAKETLE=1 GOZCU_APP="$PWD/Gözcü.app" bash kurulum/mac-kur.sh
