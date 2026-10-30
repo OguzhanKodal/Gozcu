@@ -1,0 +1,58 @@
+name: Sürüm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release --manifest-path ajan/Cargo.toml
+      - run: |
+          mkdir gozcu-ajan-linux-x86_64
+          cp ajan/target/release/gozcu-ajan kurulum/linux-kur.sh gozcu-ajan-linux-x86_64/
+          tar czf gozcu-ajan-linux-x86_64.tar.gz gozcu-ajan-linux-x86_64
+      - uses: actions/upload-artifact@v4
+        with: { name: linux, path: gozcu-ajan-linux-x86_64.tar.gz }
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release --manifest-path ajan/Cargo.toml
+      - shell: pwsh
+        run: |
+          New-Item -ItemType Directory gozcu-ajan-windows-x86_64 | Out-Null
+          Copy-Item ajan/target/release/gozcu-ajan.exe, kurulum/windows-kur.ps1 gozcu-ajan-windows-x86_64/
+          Compress-Archive gozcu-ajan-windows-x86_64 gozcu-ajan-windows-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: gozcu-ajan-windows-x86_64.zip }
+
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: GOZCU_PAKETLE=1 GOZCU_APP="$PWD/Gözcü.app" bash kurulum/mac-kur.sh
+      - run: ditto -c -k --keepParent "Gözcü.app" Gozcu-mac.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: mac, path: Gozcu-mac.zip }
+
+  yayinla:
+    needs: [linux, windows, mac]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            gozcu-ajan-linux-x86_64.tar.gz
+            gozcu-ajan-windows-x86_64.zip
+            Gozcu-mac.zip
