@@ -55,16 +55,7 @@ struct MenuLabel: View {
     @ObservedObject var store = Store.shared
     @Environment(\.openWindow) private var openWindow
     var body: some View {
-        let dots = store.machines.map { m -> String in
-            switch m.health {
-            case .ok: return "🟢"
-            case .warn: return "🟠"
-            case .alarm: return "🔴"
-            case .offline: return "⚫️"
-            }
-        }.joined()
-        let hottest = store.machines.compactMap { $0.online ? $0.status?.hottest : nil }.max()
-        Text(dots.isEmpty ? "Gözcü" : dots + (hottest.map { " \(Int($0))°" } ?? ""))
+        Text(store.menuText)
             .onAppear { PanoOpener.action = openWindow }
     }
 }

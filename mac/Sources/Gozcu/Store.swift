@@ -34,6 +34,9 @@ final class Store: ObservableObject {
 
     @Published var machines: [MachineState] = []
     @Published var notifyGames = true
+    /// Menü çubuğu etiketi. Makinelerin kendi değişiklikleri Store'u yayınlamadığı için
+    /// her yoklamadan sonra burada yeniden hesaplanır; yalnız metin değişince yayınlanır.
+    @Published private(set) var menuText = "Gözcü"
     private var timer: Timer?
     private var prev: [String: Status] = [:]
     private var offlineNotified: Set<String> = []
@@ -56,6 +59,21 @@ final class Store: ObservableObject {
     func load() {
         let decoded = (try? Data(contentsOf: Self.configURL)).flatMap { try? JSONDecoder().decode([MachineConfig].self, from: $0) } ?? []
         machines = decoded.map { MachineState(config: $0) }
+        refreshMenuText()
+    }
+
+    func refreshMenuText() {
+        let dots = machines.map { m -> String in
+            switch m.health {
+            case .ok: return "🟢"
+            case .warn: return "🟠"
+            case .alarm: return "🔴"
+            case .offline: return "⚫️"
+            }
+        }.joined()
+        let hottest = machines.compactMap { $0.online ? $0.status?.hottest : nil }.max()
+        let text = dots.isEmpty ? "Gözcü" : dots + (hottest.map { " \(Int($0))°" } ?? "")
+        if text != menuText { menuText = text }
     }
 
     func save(_ configs: [MachineConfig]) {
@@ -94,6 +112,7 @@ final class Store: ObservableObject {
 
     private func poll(_ m: MachineState) async {
         guard let req = request(m, path: "/v1/status") else { return }
+        defer { refreshMenuText() }
         do {
             let (data, resp) = try await URLSession.shared.data(for: req)
             guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
