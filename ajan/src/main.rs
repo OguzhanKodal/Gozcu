@@ -169,6 +169,8 @@ fn handle(mut req: Request, shared: &Mutex<Shared>, cfg: &Config) {
                     Some(w) if (30..=600).contains(&w) => ai::gpu_power_limit(w as u32),
                     _ => "geçersiz watt".into(),
                 },
+                "close_browsers" => ai::close_browsers(),
+                "shutdown" => ai::shutdown(),
                 "kill" => match v["pid"].as_u64() {
                     Some(p) if p > 4 => ai::kill(p as u32),
                     _ => "geçersiz pid".into(),

@@ -17,7 +17,8 @@ işlerini durdurur, oyun açıksa oyuna dokunmaz**.
 ```
 
 - **Ajan** (Rust): her izlenen makinede çalışır, `GET /v1/status` ile JSON verir, `POST /v1/action`
-  ile komut alır (AI durdur/başlat, ertele, GPU güç sınırı, süreç kapat).
+  ile komut alır (AI durdur/başlat, ertele, GPU güç sınırı, süreç kapat, tarayıcıları kapat,
+  bilgisayarı kapat).
 - **Mac uygulaması** (SwiftUI): menü çubuğunda durur; çift tıklayınca panoyu açar.
 - **Güvenlik:** ajan yalnız Tailscale ağından (100.64.0.0/10) ve aynı makineden gelen isteklere
   cevap verir; her istek gizli bir token ister.

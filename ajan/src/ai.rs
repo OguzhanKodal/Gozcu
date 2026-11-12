@@ -114,6 +114,63 @@ pub fn kill(pid: u32) -> String {
     }
 }
 
+/// Bilinen tarayıcıların ana süreç adları (küçük harf, ".exe" olmadan).
+const BROWSERS: &[&str] = &[
+    "chrome", "chromium", "chromium-browser", "google chrome", "msedge", "microsoft edge",
+    "firefox", "firefox-bin", "brave", "brave browser", "opera", "opera_gx", "vivaldi",
+    "vivaldi-bin", "safari", "arc", "zen", "zen-bin", "librewolf", "yandex", "waterfox",
+];
+
+/// Açık tarayıcıların hepsini kapatır. Unix'te önce nazikçe (SIGTERM) dener.
+pub fn close_browsers() -> String {
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    let mut closed = HashSet::new();
+    for p in sys.processes().values() {
+        let n = p.name().to_string_lossy().to_lowercase();
+        let n = n.strip_suffix(".exe").unwrap_or(&n).to_string();
+        if !BROWSERS.contains(&n.as_str()) {
+            continue;
+        }
+        let ok = p.kill_with(sysinfo::Signal::Term).unwrap_or_else(|| p.kill());
+        if ok {
+            closed.insert(n);
+        }
+    }
+    if closed.is_empty() {
+        return "Açık tarayıcı yoktu".into();
+    }
+    let mut c: Vec<_> = closed.into_iter().collect();
+    c.sort();
+    format!("Tarayıcı kapatıldı: {}", c.join(", "))
+}
+
+/// Bilgisayarı kapatır. Yanıt Mac'e ulaşabilsin diye kapanma birkaç saniye sonra başlar.
+pub fn shutdown() -> String {
+    if cfg!(windows) {
+        let msg = "Gözcü: bu bilgisayar 30 saniye içinde kapanacak. Açık işini kaydet.";
+        return match cmd("shutdown", &["/s", "/t", "30", "/c", msg]) {
+            Some(_) => "Bilgisayar 30 saniye içinde kapanacak".into(),
+            None => "Kapatma komutu çalışmadı".into(),
+        };
+    }
+    let (program, args): (&str, Vec<&str>) = if cfg!(target_os = "macos") {
+        ("osascript", vec!["-e", "tell application \"System Events\" to shut down"])
+    } else {
+        ("systemctl", vec!["poweroff"])
+    };
+    let program = program.to_string();
+    let args: Vec<String> = args.into_iter().map(String::from).collect();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(3));
+        let r = std::process::Command::new(&program).args(&args).status();
+        if !matches!(r, Ok(s) if s.success()) {
+            eprintln!("kapatma başarısız: {program} {args:?} → {r:?}");
+        }
+    });
+    "Bilgisayar birkaç saniye içinde kapanıyor".into()
+}
+
 fn today_start() -> chrono::DateTime<chrono::Local> {
     let now = chrono::Local::now();
     now.date_naive().and_hms_opt(0, 0, 0).and_then(|d| d.and_local_timezone(chrono::Local).single()).unwrap_or(now)

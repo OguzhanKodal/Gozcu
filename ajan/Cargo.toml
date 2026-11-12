@@ -1,6 +1,6 @@
 [package]
 name = "gozcu-ajan"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Gözcü ajanı: makinenin donanım, AI ve ısı durumunu Tailscale ağına JSON olarak verir"
 license = "MIT"

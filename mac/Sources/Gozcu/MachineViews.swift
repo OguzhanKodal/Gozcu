@@ -119,6 +119,7 @@ struct MiniChart: View {
 struct MachineDetail: View {
     @ObservedObject var m: MachineState
     @State private var killTarget: Proc?
+    @State private var powerAction: PowerAction?
     @State private var gpuLimit: Double = 0
     @State private var busy = false
 
@@ -230,6 +231,19 @@ struct MachineDetail: View {
                     Button { run(["action": "snooze", "minutes": 15]) } label: { Label("15 dk ertele", systemImage: "bell.slash") }
                 }
                 .disabled(busy)
+                HStack {
+                    Button { powerAction = .closeBrowsers } label: { Label("Tarayıcıyı kapat", systemImage: "globe.badge.chevron.backward") }
+                    Button { powerAction = .shutdown } label: { Label("Bilgisayarı kapat", systemImage: "power") }
+                        .tint(Theme.bad)
+                }
+                .disabled(busy)
+                .confirmationDialog(powerAction?.question(m.config.name) ?? "", isPresented: Binding(get: { powerAction != nil }, set: { if !$0 { powerAction = nil } })) {
+                    if let a = powerAction {
+                        Button(a.confirm, role: .destructive) { run(["action": a.rawValue]) }
+                    }
+                } message: {
+                    Text(powerAction?.warning ?? "")
+                }
                 if let g = s.gpu, let maxW = g.powerMaxW, maxW > 60, s.os.lowercased().contains("windows") {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("GPU güç sınırı: \(Int(gpuLimit == 0 ? (g.powerLimitW ?? maxW) : gpuLimit)) W").font(.callout)
@@ -283,6 +297,28 @@ struct MachineDetail: View {
         Task {
             await Store.shared.action(m, body)
             busy = false
+        }
+    }
+}
+
+/// Onay isteyen güç eylemleri.
+enum PowerAction: String {
+    case closeBrowsers = "close_browsers"
+    case shutdown = "shutdown"
+
+    func question(_ name: String) -> String {
+        switch self {
+        case .closeBrowsers: return "\(name) üzerindeki tarayıcılar kapatılsın mı?"
+        case .shutdown: return "\(name) kapatılsın mı?"
+        }
+    }
+
+    var confirm: String { self == .shutdown ? "Bilgisayarı kapat" : "Tarayıcıları kapat" }
+
+    var warning: String {
+        switch self {
+        case .closeBrowsers: return "Chrome, Edge, Firefox, Safari, Brave, Opera ve benzerleri hemen kapanır. Doldurulan formlar kaybolabilir."
+        case .shutdown: return "Makine birkaç saniye içinde kapanır (Windows'ta 30 sn uyarı verir). Kaydedilmemiş iş kaybolabilir; açmak için başına gitmek gerekir."
         }
     }
 }
